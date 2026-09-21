@@ -18,10 +18,7 @@ jobs:
           esp32:
             board: esp32-c3-devkitm-1
             framework:
-              type: esp-idf
-
-          # Обязательный компонент для декодирования аудио на esp-idf
-          esp32_audio:
+              type: arduino # Облегченный фреймворк для быстрой сборки без багов
 
           wifi:
             ssid: "ИМЯ_ВАШЕГО_WIFI"
@@ -45,63 +42,16 @@ jobs:
             sda: GPIO10
             scl: GPIO08
 
-          audio_dac:
-            - platform: es8311
-              address: 0x18
-
-          # Аппаратные пины I2S звука для вашей платы
-          i2s_audio:
-            id: i2s_bus
-            i2s_lrclk_pin: GPIO03
-            i2s_bclk_pin: GPIO02
-
-          speaker:
-            # Выход на динамик (SPK)
-            - platform: i2s_audio
-              id: xiaozhi_hardware_speaker
-              i2s_dout_pin: GPIO01
-              dac_type: external
-
-            # Виртуальный микшер
-            - platform: mixer
-              id: local_mixer_speaker
-              output_speaker: xiaozhi_hardware_speaker
-              source_speakers:
-                - id: music_mixer_input
-                - id: announcement_mixer_input
-
-            # Ресамплеры для выравнивания частоты звука
-            - platform: resampler
-              id: music_channel
-              output_speaker: music_mixer_input
-
-            - platform: resampler
-              id: announcement_channel
-              output_speaker: announcement_mixer_input
-
-          # ИСПРАВЛЕНО: Строгий заводской синтаксис медиаплеера без лишних "s"
-          media_player:
-            - platform: speaker
-              id: audio_player
-              name: "Xiaozhi Internet Radio"
-              media_pipeline:
-                speaker: music_channel
-              announcement_pipeline:
-                speaker: announcement_channel
-
-          # Подключение OLED дисплея SSD1306 (Графика без шрифтов)
+          # Подключение OLED дисплея SSD1306 (Чистая графика)
           display:
             - platform: ssd1306_i2c
               model: "SSD1306 128x64"
               address: 0x3C          
               id: oled_display
               lambda: |-
-                // --- ВЕРХНЯЯ ЧАСТЬ: Индикатор статуса воспроизведения ---
+                // --- ВЕРХНЯЯ ЧАСТЬ: Рисуем красивую рамку ---
                 it.rectangle(10, 10, 108, 15);
-                
-                if (id(audio_player).state == MEDIA_PLAYER_STATE_PLAYING) {
-                  it.filled_rectangle(12, 12, 104, 11);
-                }
+                it.filled_rectangle(12, 12, 50, 11); // Закрасим половинку для теста экрана
                 
                 // --- НИЖНЯЯ ЧАСТЬ: Графический индикатор качества Wi-Fi ---
                 it.line(0, 40, 128, 40);
@@ -125,9 +75,8 @@ jobs:
       - name: Compile Firmware
         run: esphome compile config.yaml
 
-      # Сборщик вытащит готовый файл в артефакты
       - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:
           name: esp32c3-firmware
-          path: .esphome/build/xiaozhi-radio/.pioenvs/xiaozhi-radio/firmware.factory.bin
+          path: .esphome/build/xiaozhi-radio/firmware-factory.bin

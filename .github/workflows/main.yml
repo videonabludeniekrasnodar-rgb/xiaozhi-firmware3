@@ -33,7 +33,7 @@ jobs:
           logger:
           api:
 
-          # ИСПРАВЛЕНО: Датчик, который сам создаст текстовый IP без сложного C++
+          # Автоматический текстовый датчик для вывода IP на экран
           text_sensor:
             - platform: wifi_info
               ip_address:
@@ -52,19 +52,32 @@ jobs:
             i2s_lrclk_pin: GPIO03
             i2s_bclk_pin: GPIO02
 
+          # КРИТИЧЕСКИЙ ФИКС: Все типы спикеров объявляются СТРОГО внутри одного блока speaker
           speaker:
+            # 1. Настоящий железный выход звука
             - platform: i2s_audio
               id: xiaozhi_hardware_speaker
               i2s_dout_pin: GPIO01
               dac_type: external
 
+            # 2. Виртуальный микшер (берет сигналы от ресамплеров и шлет на железо)
             - platform: mixer
               id: local_mixer_speaker
               output_speaker: xiaozhi_hardware_speaker
               source_speakers:
-                - id: music_channel
-                - id: announcement_channel
+                - id: music_mixer_input
+                - id: announcement_mixer_input
 
+            # 3. Ресамплеры (выравнивают частоту звука для микшера)
+            - platform: resampler
+              id: music_channel
+              output_speaker: music_mixer_input
+
+            - platform: resampler
+              id: announcement_channel
+              output_speaker: announcement_mixer_input
+
+          # Медиаплеер, который управляет созданными выше каналами ресамплера
           media_player:
             - platform: speaker
               id: audio_player
@@ -74,6 +87,7 @@ jobs:
               announcement_pipeline:
                 speaker: announcement_channel
 
+          # Дисплей
           display:
             - platform: ssd1306_i2c
               model: "SSD1306 128x64"
@@ -88,7 +102,7 @@ jobs:
                   it.print(0, 20, "Status: Idle");
                 }
                 
-                // ИСПРАВЛЕНО: Дисплей берет готовый текст из созданного выше датчика
+                // Печать IP из созданного текстового сенсора
                 it.printf(0, 45, "IP: %s", id(wifi_ip_text).state.c_str());
           EOF
 

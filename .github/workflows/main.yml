@@ -41,31 +41,26 @@ jobs:
             sda: GPIO10
             scl: GPIO08
 
-                   # ИСПРАВЛЕНО: Единственно верное имя платформы для I2C версии SSD1306
+          # Проверенная платформа дисплея
           display:
             - platform: ssd1306_i2c
               model: "SSD1306 128x64"
               address: 0x3C          
               id: oled_display
               lambda: |-
-                // Рисуем верхнюю рамку белым цветом (COLOR_ON)
                 it.rectangle(10, 10, 108, 15, COLOR_ON);
                 it.filled_rectangle(12, 12, 50, 11, COLOR_ON);
                 
-                // Рисуем разделительную линию посередине экрана
                 it.line(0, 40, 128, 40, COLOR_ON);
                 
-                // Безопасный расчет уровня Wi-Fi без ухода в ошибку "nan"
                 float signal = id(wifi_signal_db).state;
                 if (!isnan(signal)) {
                   int bar_width = (int)(signal + 100) * 2;
                   if (bar_width < 0) bar_width = 0;
                   if (bar_width > 128) bar_width = 128;
                   
-                  // Рисуем нижнюю шкалу уровня сигнала
                   it.filled_rectangle(0, 55, bar_width, 8, COLOR_ON);
                 }
-
           EOF
 
       - name: Set up Python
@@ -79,9 +74,23 @@ jobs:
       - name: Compile Firmware
         run: esphome compile config.yaml
 
+      # УМНЫЙ ХОД: Ищем любой готовый factory/объединенный бинарник и копируем в корень репозитория
+      - name: Find and Prepare Firmware File
+        run: |
+          mkdir -p output_bin
+          FIND_FACTORY=$(find .esphome/build/ -type f -name "*factory.bin" | head -n 1)
+          if [ -n "$FIND_FACTORY" ]; then
+            echo "Найдена factory-прошивка: $FIND_FACTORY"
+            cp "$FIND_FACTORY" output_bin/firmware.bin
+          else
+            FIND_ANY=$(find .esphome/build/ -type f -name "*.bin" | head -n 1)
+            echo "Factory не найден, берем обычный бинарник: $FIND_ANY"
+            cp "$FIND_ANY" output_bin/firmware.bin
+          fi
+
+      # Скачиваем файл из нашей гарантированно существующей папки output_bin
       - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:
           name: esp32c3-firmware
-          path: .esphome/build/xiaozhi-radio/firmware-factory.bin
-
+          path: output_bin/firmware.bin

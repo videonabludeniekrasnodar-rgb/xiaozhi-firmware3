@@ -20,8 +20,6 @@ jobs:
             framework:
               type: esp-idf
 
-          esp32_audio:
-
           wifi:
             ssid: "ИМЯ_ВАШЕГО_WIFI"
             password: "ПАРОЛЬ_ОТ_WIFI"
@@ -77,7 +75,7 @@ jobs:
               id: announcement_channel
               output_speaker: announcement_mixer_input
 
-          # Единственный рабочий медиаплеер
+          # Медиаплеер
           media_player:
             - platform: speaker
               id: audio_player
@@ -94,7 +92,6 @@ jobs:
               address: 0x3C          
               id: oled_display
               lambda: |-
-                // ИСПРАВЛЕНО: Используем строго .print() без форматирования printf, чтобы не требовать шрифты
                 it.print(0, 0, "Xiaozhi Radio");
                 
                 if (id(audio_player).state == MEDIA_PLAYER_STATE_PLAYING) {
@@ -103,7 +100,6 @@ jobs:
                   it.print(0, 20, "Status: Idle");
                 }
                 
-                // ИСПРАВЛЕНО: Выводим IP через сложение строк, полностью избегая printf
                 std::string ip_line = "IP: " + id(wifi_ip_text).state;
                 it.print(0, 45, ip_line.c_str());
           EOF

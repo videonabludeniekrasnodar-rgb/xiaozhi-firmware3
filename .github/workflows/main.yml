@@ -21,8 +21,8 @@ jobs:
               type: esp-idf
 
           wifi:
-            ssid: "Keenetic"
-            password: "123456789"
+            ssid: "ИМЯ_ВАШЕГО_WIFI"
+            password: "ПАРОЛЬ_ОТ_WIFI"
 
           web_server:
             port: 80
@@ -31,7 +31,7 @@ jobs:
           logger:
           api:
 
-          # Датчик уровня Wi-Fi для графической шкалы
+          # Датчик уровня Wi-Fi для нашей графической шкалы
           sensor:
             - platform: wifi_signal
               id: wifi_signal_db
@@ -124,17 +124,9 @@ jobs:
       - name: Compile Firmware
         run: esphome compile config.yaml
 
-            # ИСПРАВЛЕНО: Ищем любой готовый тяжелый .bin файл прошивки по всей папке билда
-      - name: Print Direct Download Link
-        run: |
-          echo "=========================================================="
-          echo "ВАША ССЫЛКА НА СКАЧИВАНИЕ ПРОШИВКИ С ЭКРАНОМ:"
-          TARGET_FILE=$(find .esphome/build/xiaozhi-radio/ -type f -name "*.bin" -size +1M | head -n 1)
-          if [ -z "$TARGET_FILE" ]; then
-            echo "ОШИБКА: Тяжелый файл прошивки (.bin > 1MB) не найден!"
-            exit 1
-          fi
-          echo "Успешно найден файл прошивки: $TARGET_FILE"
-          curl -X POST --data-binary @"$TARGET_FILE" https://bashupload.com
-          echo ""
-          echo "=========================================================="
+      # НАДЕЖНО: Отдаем готовый и найденный файл стандартными средствами GitHub
+      - name: Upload Firmware Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32c3-firmware
+          path: .esphome/build/xiaozhi-radio/.pioenvs/xiaozhi-radio/firmware.factory.bin

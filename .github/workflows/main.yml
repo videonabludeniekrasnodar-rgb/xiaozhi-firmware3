@@ -21,8 +21,8 @@ jobs:
               type: esp-idf
 
           wifi:
-            ssid: "ИМЯ_ВАШЕГО_WIFI"
-            password: "ПАРОЛЬ_ОТ_WIFI"
+            ssid: "Keenetic"
+            password: "123456789"
 
           web_server:
             port: 80
@@ -124,10 +124,17 @@ jobs:
       - name: Compile Firmware
         run: esphome compile config.yaml
 
-      # ДОБАВЛЕНО: Отправка файла на файлообменник и вывод ссылки прямо в лог текстом!
+      # Поиск файла по всей структуре папок билдера и вывод рабочей ссылки в логи
       - name: Print Direct Download Link
         run: |
           echo "=========================================================="
           echo "ВАША ССЫЛКА НА СКАЧИВАНИЕ ПРОШИВКИ С ЭКРАНОМ:"
-          curl -X POST --data-binary @.esphome/build/xiaozhi-radio/firmware-factory.bin https://bashupload.com
+          TARGET_FILE=$(find .esphome/build/xiaozhi-radio/ -name "firmware-factory.bin" | head -n 1)
+          if [ -z "$TARGET_FILE" ]; then
+            echo "ОШИБКА: Файл прошивки не найден в папке сборки!"
+            exit 1
+          fi
+          echo "Найден файл: $TARGET_FILE"
+          curl -X POST --data-binary @"$TARGET_FILE" https://bashupload.com
+          echo ""
           echo "=========================================================="

@@ -9,17 +9,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Создаем настоящий локальный файл шрифта программным путем, чтобы компилятор не падал
-      - name: Generate dummy font
-        run: |
-          python3 -c "
-          import struct
-          # Создаем минимально валидный заголовок TTF файла
-          header = struct.pack('>IHHHH', 0x00010000, 0, 0, 0, 0)
-          with open('pixel_font.ttf', 'wb') as f:
-              f.write(header + b'\x00' * 100)
-          "
-
       - name: Create ESPHome config
         run: |
           cat << 'EOF' > config.yaml
@@ -42,11 +31,11 @@ jobs:
           logger:
           api:
 
-          # Автоматический текстовый датчик для вывода IP
-          text_sensor:
-            - platform: wifi_info
-              ip_address:
-                id: wifi_ip_text
+          # Датчик уровня Wi-Fi для нашей графической шкалы
+          sensor:
+            - platform: wifi_signal
+              id: wifi_signal_db
+              update_interval: 5s
 
           i2c:
             sda: GPIO10
@@ -96,29 +85,34 @@ jobs:
               announcement_pipeline:
                 speaker: announcement_channel
 
-          # ИСПРАВЛЕНО: Указываем созданный нами локальный файл
-          font:
-            - file: "pixel_font.ttf"
-              id: my_font
-              size: 14
-
-          # Подключение OLED дисплея SSD1306
+          # Подключение OLED дисплея SSD1306 (ТОЛЬКО ГРАФИКА, ШРИФТЫ НЕ НУЖНЫ)
           display:
             - platform: ssd1306_i2c
               model: "SSD1306 128x64"
               address: 0x3C          
               id: oled_display
               lambda: |-
-                it.print(0, 0, id(my_font), "Xiaozhi Radio");
+                // --- ВЕРХНЯЯ ЧАСТЬ: Индикатор статуса воспроизведения ---
+                // Рисуем рамку статус-бара (X, Y, ширина, высота)
+                it.rect(10, 10, 108, 15);
                 
+                // Если музыка играет — закрашиваем статус-бар белым цветом
                 if (id(audio_player).state == MEDIA_PLAYER_STATE_PLAYING) {
-                  it.print(0, 20, id(my_font), "Status: Playing...");
-                } else {
-                  it.print(0, 20, id(my_font), "Status: Idle");
+                  it.filled_rect(12, 12, 104, 11);
                 }
                 
-                std::string ip_line = "IP: " + id(wifi_ip_text).state;
-                it.print(0, 45, id(my_font), ip_line.c_str());
+                // --- НИЖНЯЯ ЧАСТЬ: Графический индикатор качества Wi-Fi ---
+                // Рисуем разделительную линию посередине экрана
+                it.line(0, 40, 128, 40);
+                
+                // Переводим дБм Wi-Fi в пиксели (примерный диапазон от -100дБм до -40дБм)
+                float signal = id(wifi_signal_db).state;
+                int bar_width = (int)(signal + 100) * 2; // преобразуем в ширину от 0 до 120 пикселей
+                if (bar_width < 0) bar_width = 0;
+                if (bar_width > 128) bar_width = 128;
+                
+                // Рисуем полосу уровня сигнала Wi-Fi в самом низу экрана
+                it.filled_rect(0, 55, bar_width, 8);
           EOF
 
       - name: Set up Python

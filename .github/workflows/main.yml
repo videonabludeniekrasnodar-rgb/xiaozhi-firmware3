@@ -1,4 +1,4 @@
-name: Build ESPHome Firmware 1
+name: Build ESPHome Firmware
 
 on: [workflow_dispatch]
 
@@ -37,6 +37,7 @@ jobs:
               id: wifi_signal_db
               update_interval: 5s
 
+          # Точные пины I2C с вашей платы на фото (SDA=10, SCL=8)
           i2c:
             sda: GPIO10
             scl: GPIO08
@@ -45,14 +46,14 @@ jobs:
             - platform: es8311
               address: 0x18
 
-          # Аппаратная шина I2S
+          # Аппаратные пины I2S звука для вашей платы
           i2s_audio:
             id: i2s_bus
             i2s_lrclk_pin: GPIO03
             i2s_bclk_pin: GPIO02
 
           speaker:
-            # Настоящий физический выход на чип звука
+            # Выход на динамик (SPK)
             - platform: i2s_audio
               id: xiaozhi_hardware_speaker
               i2s_dout_pin: GPIO01
@@ -95,7 +96,6 @@ jobs:
                 // --- ВЕРХНЯЯ ЧАСТЬ: Индикатор статуса воспроизведения ---
                 it.rectangle(10, 10, 108, 15);
                 
-                // Если музыка играет — закрашиваем статус-бар белым цветом
                 if (id(audio_player).state == MEDIA_PLAYER_STATE_PLAYING) {
                   it.filled_rectangle(12, 12, 104, 11);
                 }
@@ -103,13 +103,11 @@ jobs:
                 // --- НИЖНЯЯ ЧАСТЬ: Графический индикатор качества Wi-Fi ---
                 it.line(0, 40, 128, 40);
                 
-                // Переводим дБм Wi-Fi в пиксели
                 float signal = id(wifi_signal_db).state;
                 int bar_width = (int)(signal + 100) * 2;
                 if (bar_width < 0) bar_width = 0;
                 if (bar_width > 128) bar_width = 128;
                 
-                // Рисуем полосу уровня сигнала Wi-Fi в самом низу экрана
                 it.filled_rectangle(0, 55, bar_width, 8);
           EOF
 
@@ -124,7 +122,7 @@ jobs:
       - name: Compile Firmware
         run: esphome compile config.yaml
 
-      # НАДЕЖНО: Отдаем готовый и найденный файл стандартными средствами GitHub
+      # Сборщик вытащит готовый файл по точному найденному пути
       - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:

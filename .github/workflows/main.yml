@@ -20,8 +20,6 @@ jobs:
             framework:
               type: esp-idf
 
-          esp32_audio:
-
           wifi:
             ssid: "ИМЯ_ВАШЕГО_WIFI"
             password: "ПАРОЛЬ_ОТ_WIFI"
@@ -47,20 +45,21 @@ jobs:
             - platform: es8311
               address: 0x18
 
+          # 1. Инициализация аппаратной шины I2S
           i2s_audio:
             id: i2s_bus
             i2s_lrclk_pin: GPIO03
             i2s_bclk_pin: GPIO02
 
-          # КРИТИЧЕСКИЙ ФИКС: Все типы спикеров объявляются СТРОГО внутри одного блока speaker
+          # 2. Объявление динамиков и обработчиков (Все строго внутри speaker)
           speaker:
-            # 1. Настоящий железный выход звука
+            # Настоящий физический выход на чип I2S
             - platform: i2s_audio
               id: xiaozhi_hardware_speaker
               i2s_dout_pin: GPIO01
               dac_type: external
 
-            # 2. Виртуальный микшер (берет сигналы от ресамплеров и шлет на железо)
+            # Микшер каналов анонсов и музыки
             - platform: mixer
               id: local_mixer_speaker
               output_speaker: xiaozhi_hardware_speaker
@@ -68,7 +67,7 @@ jobs:
                 - id: music_mixer_input
                 - id: announcement_mixer_input
 
-            # 3. Ресамплеры (выравнивают частоту звука для микшера)
+            # Ресамплеры для подгонки частоты дискретизации звука
             - platform: resampler
               id: music_channel
               output_speaker: music_mixer_input
@@ -77,7 +76,7 @@ jobs:
               id: announcement_channel
               output_speaker: announcement_mixer_input
 
-          # Медиаплеер, который управляет созданными выше каналами ресамплера
+          # 3. Медиаплеер, использующий подготовленные каналы
           media_player:
             - platform: speaker
               id: audio_player
@@ -87,7 +86,6 @@ jobs:
               announcement_pipeline:
                 speaker: announcement_channel
 
-          # Дисплей
           display:
             - platform: ssd1306_i2c
               model: "SSD1306 128x64"

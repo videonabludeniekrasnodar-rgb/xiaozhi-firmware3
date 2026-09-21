@@ -20,9 +20,12 @@ jobs:
             framework:
               type: esp-idf
 
+          # Обязательный компонент для декодирования аудио на esp-idf
+          esp32_audio:
+
           wifi:
-            ssid: "Keenetic"
-            password: "123456789"
+            ssid: "ИМЯ_ВАШЕГО_WIFI"
+            password: "ПАРОЛЬ_ОТ_WIFI"
 
           web_server:
             port: 80
@@ -37,7 +40,7 @@ jobs:
               id: wifi_signal_db
               update_interval: 5s
 
-          # Точные пины I2C с вашей платы на фото (SDA=10, SCL=8)
+          # Точные пины I2C с вашей фотографии платы (SDA=10, SCL=8)
           i2c:
             sda: GPIO10
             scl: GPIO08
@@ -76,7 +79,7 @@ jobs:
               id: announcement_channel
               output_speaker: announcement_mixer_input
 
-          # Медиаплеер
+          # ИСПРАВЛЕНО: Строгий заводской синтаксис медиаплеера без лишних "s"
           media_player:
             - platform: speaker
               id: audio_player
@@ -122,7 +125,7 @@ jobs:
       - name: Compile Firmware
         run: esphome compile config.yaml
 
-      # Сборщик вытащит готовый файл по точному найденному пути
+      # Сборщик вытащит готовый файл в артефакты
       - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:

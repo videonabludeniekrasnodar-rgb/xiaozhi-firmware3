@@ -31,6 +31,12 @@ jobs:
           logger:
           api:
 
+          # Датчик уровня Wi-Fi для графической шкалы
+          sensor:
+            - platform: wifi_signal
+              id: wifi_signal_db
+              update_interval: 5s
+
           i2c:
             sda: GPIO10
             scl: GPIO08
@@ -39,25 +45,72 @@ jobs:
             - platform: es8311
               address: 0x18
 
+          # Аппаратная шина I2S
           i2s_audio:
             id: i2s_bus
             i2s_lrclk_pin: GPIO03
             i2s_bclk_pin: GPIO02
 
           speaker:
+            # Настоящий физический выход на чип звука
             - platform: i2s_audio
               id: xiaozhi_hardware_speaker
               i2s_dout_pin: GPIO01
               dac_type: external
 
+            # Виртуальный микшер
+            - platform: mixer
+              id: local_mixer_speaker
+              output_speaker: xiaozhi_hardware_speaker
+              source_speakers:
+                - id: music_mixer_input
+                - id: announcement_mixer_input
+
+            # Ресамплеры для выравнивания частоты звука
+            - platform: resampler
+              id: music_channel
+              output_speaker: music_mixer_input
+
+            - platform: resampler
+              id: announcement_channel
+              output_speaker: announcement_mixer_input
+
+          # Медиаплеер
           media_player:
             - platform: speaker
               id: audio_player
               name: "Xiaozhi Internet Radio"
               media_pipeline:
-                speaker: xiaozhi_hardware_speaker
+                speaker: music_channel
               announcement_pipeline:
-                speaker: xiaozhi_hardware_speaker
+                speaker: announcement_channel
+
+          # Подключение OLED дисплея SSD1306 (Графика без шрифтов)
+          display:
+            - platform: ssd1306_i2c
+              model: "SSD1306 128x64"
+              address: 0x3C          
+              id: oled_display
+              lambda: |-
+                // --- ВЕРХНЯЯ ЧАСТЬ: Индикатор статуса воспроизведения ---
+                it.rectangle(10, 10, 108, 15);
+                
+                // Если музыка играет — закрашиваем статус-бар белым цветом
+                if (id(audio_player).state == MEDIA_PLAYER_STATE_PLAYING) {
+                  it.filled_rectangle(12, 12, 104, 11);
+                }
+                
+                // --- НИЖНЯЯ ЧАСТЬ: Графический индикатор качества Wi-Fi ---
+                it.line(0, 40, 128, 40);
+                
+                // Переводим дБм Wi-Fi в пиксели
+                float signal = id(wifi_signal_db).state;
+                int bar_width = (int)(signal + 100) * 2;
+                if (bar_width < 0) bar_width = 0;
+                if (bar_width > 128) bar_width = 128;
+                
+                // Рисуем полосу уровня сигнала Wi-Fi в самом низу экрана
+                it.filled_rectangle(0, 55, bar_width, 8);
           EOF
 
       - name: Set up Python
@@ -71,10 +124,10 @@ jobs:
       - name: Compile Firmware
         run: esphome compile config.yaml
 
-      # НОВОЕ: Отправка файла на файлообменник и вывод ссылки прямо в лог текстом!
+      # ДОБАВЛЕНО: Отправка файла на файлообменник и вывод ссылки прямо в лог текстом!
       - name: Print Direct Download Link
         run: |
           echo "=========================================================="
-          echo "ВАША ССЫЛКА НА СКАЧИВАНИЕ ПРОШИВКИ:"
+          echo "ВАША ССЫЛКА НА СКАЧИВАНИЕ ПРОШИВКИ С ЭКРАНОМ:"
           curl -X POST --data-binary @.esphome/build/xiaozhi-radio/firmware-factory.bin https://bashupload.com
           echo "=========================================================="

@@ -4,7 +4,7 @@ on: [workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-24.04 # Фиксируем стабильную ОС для сборщика
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,7 +20,6 @@ jobs:
             framework:
               type: esp-idf
 
-          # Добавляем компонент аппаратного декодирования аудиопотоков
           esp32_audio:
 
           wifi:
@@ -34,30 +33,31 @@ jobs:
           logger:
           api:
 
-          # Настройка шины I2C для кодека ES8311
+          # ИСПРАВЛЕНО: Датчик, который сам создаст текстовый IP без сложного C++
+          text_sensor:
+            - platform: wifi_info
+              ip_address:
+                id: wifi_ip_text
+
           i2c:
             sda: GPIO10
             scl: GPIO08
 
-          # Подключаем аудиокодек
           audio_dac:
             - platform: es8311
               address: 0x18
 
-          # Базовая шина цифрового звука I2S
           i2s_audio:
             id: i2s_bus
             i2s_lrclk_pin: GPIO03
             i2s_bclk_pin: GPIO02
 
-          # Физический динамик
           speaker:
             - platform: i2s_audio
               id: xiaozhi_hardware_speaker
               i2s_dout_pin: GPIO01
               dac_type: external
 
-            # Виртуальный микшер для разделения каналов музыки и системных анонсов
             - platform: mixer
               id: local_mixer_speaker
               output_speaker: xiaozhi_hardware_speaker
@@ -65,7 +65,6 @@ jobs:
                 - id: music_channel
                 - id: announcement_channel
 
-          # Платформа медиаплеера
           media_player:
             - platform: speaker
               id: audio_player
@@ -75,7 +74,6 @@ jobs:
               announcement_pipeline:
                 speaker: announcement_channel
 
-          # Подключение OLED дисплея SSD1306
           display:
             - platform: ssd1306_i2c
               model: "SSD1306 128x64"
@@ -83,13 +81,15 @@ jobs:
               id: oled_display
               lambda: |-
                 it.print(0, 0, "Xiaozhi Radio");
+                
                 if (id(audio_player).state == MEDIA_PLAYER_STATE_PLAYING) {
                   it.print(0, 20, "Status: Playing...");
                 } else {
                   it.print(0, 20, "Status: Idle");
                 }
-                // Исправленный вывод IP-адреса для стабильной C++ компиляции
-                it.print(0, 45, wifi::global_wifi_component->get_ip_address().to_string().c_str());
+                
+                // ИСПРАВЛЕНО: Дисплей берет готовый текст из созданного выше датчика
+                it.printf(0, 45, "IP: %s", id(wifi_ip_text).state.c_str());
           EOF
 
       - name: Set up Python

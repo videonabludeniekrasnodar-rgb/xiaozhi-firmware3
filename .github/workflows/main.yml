@@ -4,7 +4,7 @@ on: [workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Фиксируем стабильную ОС для сборщика
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,7 +18,10 @@ jobs:
           esp32:
             board: esp32-c3-devkitm-1
             framework:
-              type: esp-idf # КРИТИЧЕСКИ ВАЖНО: Только esp-idf поддерживает современный плеер
+              type: esp-idf
+
+          # Добавляем компонент аппаратного декодирования аудиопотоков
+          esp32_audio:
 
           wifi:
             ssid: "ИМЯ_ВАШЕГО_WIFI"
@@ -62,7 +65,7 @@ jobs:
                 - id: music_channel
                 - id: announcement_channel
 
-          # Современная и единственная верная платформа медиаплеера
+          # Платформа медиаплеера
           media_player:
             - platform: speaker
               id: audio_player
@@ -85,7 +88,8 @@ jobs:
                 } else {
                   it.print(0, 20, "Status: Idle");
                 }
-                it.print(0, 45, wifi_wifi_component->get_ip_address().to_string().c_str());
+                // Исправленный вывод IP-адреса для стабильной C++ компиляции
+                it.print(0, 45, wifi::global_wifi_component->get_ip_address().to_string().c_str());
           EOF
 
       - name: Set up Python

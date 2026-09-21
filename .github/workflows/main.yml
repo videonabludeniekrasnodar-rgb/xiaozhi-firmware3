@@ -124,17 +124,17 @@ jobs:
       - name: Compile Firmware
         run: esphome compile config.yaml
 
-      # Поиск файла по всей структуре папок билдера и вывод рабочей ссылки в логи
+            # ИСПРАВЛЕНО: Ищем любой готовый тяжелый .bin файл прошивки по всей папке билда
       - name: Print Direct Download Link
         run: |
           echo "=========================================================="
           echo "ВАША ССЫЛКА НА СКАЧИВАНИЕ ПРОШИВКИ С ЭКРАНОМ:"
-          TARGET_FILE=$(find .esphome/build/xiaozhi-radio/ -name "firmware-factory.bin" | head -n 1)
+          TARGET_FILE=$(find .esphome/build/xiaozhi-radio/ -type f -name "*.bin" -size +1M | head -n 1)
           if [ -z "$TARGET_FILE" ]; then
-            echo "ОШИБКА: Файл прошивки не найден в папке сборки!"
+            echo "ОШИБКА: Тяжелый файл прошивки (.bin > 1MB) не найден!"
             exit 1
           fi
-          echo "Найден файл: $TARGET_FILE"
+          echo "Успешно найден файл прошивки: $TARGET_FILE"
           curl -X POST --data-binary @"$TARGET_FILE" https://bashupload.com
           echo ""
           echo "=========================================================="

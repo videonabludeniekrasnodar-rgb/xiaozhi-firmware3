@@ -41,9 +41,9 @@ jobs:
             sda: GPIO10
             scl: GPIO08
 
-          # Официальная платформа для OLED-экранов SSD1306
+                   # ИСПРАВЛЕНО: Единственно верное имя платформы для I2C версии SSD1306
           display:
-            - platform: ssd1306
+            - platform: ssd1306_i2c
               model: "SSD1306 128x64"
               address: 0x3C          
               id: oled_display
@@ -65,6 +65,7 @@ jobs:
                   // Рисуем нижнюю шкалу уровня сигнала
                   it.filled_rectangle(0, 55, bar_width, 8, COLOR_ON);
                 }
+
           EOF
 
       - name: Set up Python

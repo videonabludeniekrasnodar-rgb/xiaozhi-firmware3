@@ -18,11 +18,11 @@ jobs:
           esp32:
             board: esp32-c3-devkitm-1
             framework:
-              type: arduino # Облегченный фреймворк для быстрой сборки без багов
+              type: arduino
 
           wifi:
-            ssid: "ИМЯ_ВАШЕГО_WIFI"
-            password: "ПАРОЛЬ_ОТ_WIFI"
+            ssid: "Keenetic"
+            password: "123456789"
 
           web_server:
             port: 80
@@ -31,37 +31,40 @@ jobs:
           logger:
           api:
 
-          # Датчик уровня Wi-Fi для нашей графической шкалы
           sensor:
             - platform: wifi_signal
               id: wifi_signal_db
               update_interval: 5s
 
-          # Точные пины I2C с вашей фотографии платы (SDA=10, SCL=8)
+          # Точные пины I2C с вашей фотографии платы
           i2c:
             sda: GPIO10
             scl: GPIO08
 
-          # Подключение OLED дисплея SSD1306 (Чистая графика)
+          # Официальная платформа для OLED-экранов SSD1306
           display:
-            - platform: ssd1306_i2c
+            - platform: ssd1306
               model: "SSD1306 128x64"
               address: 0x3C          
               id: oled_display
               lambda: |-
-                // --- ВЕРХНЯЯ ЧАСТЬ: Рисуем красивую рамку ---
-                it.rectangle(10, 10, 108, 15);
-                it.filled_rectangle(12, 12, 50, 11); // Закрасим половинку для теста экрана
+                // Рисуем верхнюю рамку белым цветом (COLOR_ON)
+                it.rectangle(10, 10, 108, 15, COLOR_ON);
+                it.filled_rectangle(12, 12, 50, 11, COLOR_ON);
                 
-                // --- НИЖНЯЯ ЧАСТЬ: Графический индикатор качества Wi-Fi ---
-                it.line(0, 40, 128, 40);
+                // Рисуем разделительную линию посередине экрана
+                it.line(0, 40, 128, 40, COLOR_ON);
                 
+                // Безопасный расчет уровня Wi-Fi без ухода в ошибку "nan"
                 float signal = id(wifi_signal_db).state;
-                int bar_width = (int)(signal + 100) * 2;
-                if (bar_width < 0) bar_width = 0;
-                if (bar_width > 128) bar_width = 128;
-                
-                it.filled_rectangle(0, 55, bar_width, 8);
+                if (!isnan(signal)) {
+                  int bar_width = (int)(signal + 100) * 2;
+                  if (bar_width < 0) bar_width = 0;
+                  if (bar_width > 128) bar_width = 128;
+                  
+                  // Рисуем нижнюю шкалу уровня сигнала
+                  it.filled_rectangle(0, 55, bar_width, 8, COLOR_ON);
+                }
           EOF
 
       - name: Set up Python
@@ -80,3 +83,4 @@ jobs:
         with:
           name: esp32c3-firmware
           path: .esphome/build/xiaozhi-radio/firmware-factory.bin
+

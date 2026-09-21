@@ -1,0 +1,106 @@
+name: Build ESPHome Firmware
+
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create ESPHome config
+        run: |
+          cat << 'EOF' > config.yaml
+          esphome:
+            name: xiaozhi-radio
+
+          esp32:
+            board: esp32-c3-devkitm-1
+            framework:
+              type: esp-idf # КРИТИЧЕСКИ ВАЖНО: Только esp-idf поддерживает современный плеер
+
+          wifi:
+            ssid: "ИМЯ_ВАШЕГО_WIFI"
+            password: "ПАРОЛЬ_ОТ_WIFI"
+
+          web_server:
+            port: 80
+            version: 3
+
+          logger:
+          api:
+
+          # Настройка шины I2C для кодека ES8311
+          i2c:
+            sda: GPIO10
+            scl: GPIO08
+
+          # Подключаем аудиокодек
+          audio_dac:
+            - platform: es8311
+              address: 0x18
+
+          # Базовая шина цифрового звука I2S
+          i2s_audio:
+            id: i2s_bus
+            i2s_lrclk_pin: GPIO03
+            i2s_bclk_pin: GPIO02
+
+          # Физический динамик
+          speaker:
+            - platform: i2s_audio
+              id: xiaozhi_hardware_speaker
+              i2s_dout_pin: GPIO01
+              dac_type: external
+
+            # Виртуальный микшер для разделения каналов музыки и системных анонсов
+            - platform: mixer
+              id: local_mixer_speaker
+              output_speaker: xiaozhi_hardware_speaker
+              source_speakers:
+                - id: music_channel
+                - id: announcement_channel
+
+          # Современная и единственная верная платформа медиаплеера
+          media_player:
+            - platform: speaker
+              id: audio_player
+              name: "Xiaozhi Internet Radio"
+              media_pipeline:
+                speaker: music_channel
+              announcement_pipeline:
+                speaker: announcement_channel
+
+          # Подключение OLED дисплея SSD1306
+          display:
+            - platform: ssd1306_i2c
+              model: "SSD1306 128x64"
+              address: 0x3C          
+              id: oled_display
+              lambda: |-
+                it.print(0, 0, "Xiaozhi Radio");
+                if (id(audio_player).state == MEDIA_PLAYER_STATE_PLAYING) {
+                  it.print(0, 20, "Status: Playing...");
+                } else {
+                  it.print(0, 20, "Status: Idle");
+                }
+                it.print(0, 45, wifi_wifi_component->get_ip_address().to_string().c_str());
+          EOF
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ESPHome
+        run: pip install esphome
+
+      - name: Compile Firmware
+        run: esphome compile config.yaml
+
+      - name: Upload Firmware Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32c3-firmware
+          path: .esphome/build/xiaozhi-radio/firmware-factory.bin

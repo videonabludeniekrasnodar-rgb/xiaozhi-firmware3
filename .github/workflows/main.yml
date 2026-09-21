@@ -85,6 +85,12 @@ jobs:
               announcement_pipeline:
                 speaker: announcement_channel
 
+          # Включаем встроенный шрифт ядра, который не требует скачивания файлов
+          font:
+            - type: gfill
+              id: my_font
+              size: 14
+
           # Подключение OLED дисплея SSD1306
           display:
             - platform: ssd1306_i2c
@@ -92,16 +98,17 @@ jobs:
               address: 0x3C          
               id: oled_display
               lambda: |-
-                it.print(0, 0, "Xiaozhi Radio");
+                // Теперь передаем id(my_font) третьим аргументом — строго по правилам ядра!
+                it.print(0, 0, id(my_font), "Xiaozhi Radio");
                 
                 if (id(audio_player).state == MEDIA_PLAYER_STATE_PLAYING) {
-                  it.print(0, 20, "Status: Playing...");
+                  it.print(0, 20, id(my_font), "Status: Playing...");
                 } else {
-                  it.print(0, 20, "Status: Idle");
+                  it.print(0, 20, id(my_font), "Status: Idle");
                 }
                 
                 std::string ip_line = "IP: " + id(wifi_ip_text).state;
-                it.print(0, 45, ip_line.c_str());
+                it.print(0, 45, id(my_font), ip_line.c_str());
           EOF
 
       - name: Set up Python
